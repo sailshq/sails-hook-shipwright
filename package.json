@@ -1,0 +1,32 @@
+{
+  "name": "sails-hook-shipwright",
+  "version": "0.0.1",
+  "description": "The modern asset pipeline for Sails",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sailshq/sails-hook-shipwright.git"
+  },
+  "keywords": [
+    "rsbuild",
+    "assets",
+    "asset-pipeline",
+    "automation",
+    "hook",
+    "sails",
+    "sails-hook"
+  ],
+  "author": "Kelvin Omereshone <kelvin@sailscasts.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sailshq/sails-hook-shipwright/issues"
+  },
+  "homepage": "https://github.com/sailshq/sails-hook-shipwright#readme",
+  "sails": {
+    "isHook": true,
+    "hookName": "shipwright"
+  }
+}
