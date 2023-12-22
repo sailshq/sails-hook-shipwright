@@ -4,7 +4,8 @@
   "description": "The modern asset pipeline for Sails",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -28,5 +29,18 @@
   "sails": {
     "isHook": true,
     "hookName": "shipwright"
+  },
+  "dependencies": {
+    "@rsbuild/core": "^0.2.8"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "3.1.1"
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
   }
 }
