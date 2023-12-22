@@ -1,0 +1,45 @@
+{
+  "name": "sails-hook-shipwright",
+  "version": "0.0.1",
+  "description": "The modern asset pipeline for Sails",
+  "main": "index.js",
+  "scripts": {
+    "prepare": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sailshq/sails-hook-shipwright.git"
+  },
+  "keywords": [
+    "rsbuild",
+    "assets",
+    "asset-pipeline",
+    "automation",
+    "hook",
+    "sails",
+    "sails-hook"
+  ],
+  "author": "Kelvin Omereshone <kelvin@sailscasts.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sailshq/sails-hook-shipwright/issues"
+  },
+  "homepage": "https://github.com/sailshq/sails-hook-shipwright#readme",
+  "sails": {
+    "isHook": true,
+    "hookName": "shipwright"
+  },
+  "dependencies": {
+    "@rsbuild/core": "^0.2.8"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "3.1.1"
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
+  }
+}
