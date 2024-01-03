@@ -38,11 +38,13 @@ module.exports = function defineShipwrightHook(sails) {
           copy: [
             {
               from: path.resolve(appPath, 'assets', 'images'),
-              to: path.resolve(appPath, '.tmp', 'public', 'images')
+              to: path.resolve(appPath, '.tmp', 'public', 'images'),
+              noErrorOnMissing: true
             },
             {
               from: path.resolve(appPath, 'assets', 'fonts'),
-              to: path.resolve(appPath, '.tmp', 'public', 'fonts')
+              to: path.resolve(appPath, '.tmp', 'public', 'fonts'),
+              noErrorOnMissing: true
             },
             {
               context: path.resolve(appPath, 'assets'),
