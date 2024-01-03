@@ -73,6 +73,8 @@ module.exports = function defineShipwrightHook(sails) {
         if (process.env.NODE_ENV == 'production') {
           rsbuild.build()
         } else {
+          const serverAPIs = await rsbuild.getServerAPIs()
+          console.log(serverAPIs)
           rsbuild.build({ mode: 'development', watch: true })
         }
       } catch (error) {
