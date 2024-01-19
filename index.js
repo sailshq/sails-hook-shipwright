@@ -47,6 +47,11 @@ module.exports = function defineShipwrightHook(sails) {
               noErrorOnMissing: true
             },
             {
+              from: path.resolve(appPath, 'assets', 'dependencies'),
+              to: path.resolve(appPath, '.tmp', 'public', 'dependencies'),
+              noErrorOnMissing: true
+            },
+            {
               context: path.resolve(appPath, 'assets'),
               from: '**/*.html',
               to: path.resolve(appPath, '.tmp', 'public'),
