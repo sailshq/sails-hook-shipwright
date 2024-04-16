@@ -26,7 +26,7 @@ module.exports = function defineShipwrightHook(sails) {
           }
         },
         output: {
-          filenameHash: true,
+          filenameHash: false,
           distPath: {
             root: '.tmp/public',
             css: 'css',
