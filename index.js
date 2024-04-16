@@ -66,6 +66,11 @@ module.exports = function defineShipwrightHook(sails) {
           chunkSplit: {
             strategy: 'all-in-one'
           }
+        },
+        server: {
+          port: sails.config.port,
+          strictPort: true,
+          printUrls: false
         }
       })
       const config = mergeRsbuildConfig(
@@ -78,8 +83,20 @@ module.exports = function defineShipwrightHook(sails) {
         if (process.env.NODE_ENV == 'production') {
           rsbuild.build()
         } else {
-          const { middlewares } = await rsbuild.cre
-          // rsbuild.build({ mode: 'development', watch: true })
+          const rsbuildDevServer = await rsbuild.createDevServer()
+          sails.after('hook:http:loaded', async () => {
+            sails.hooks.http.app.use(rsbuildDevServer.middlewares)
+            sails.hooks.http.server.on(
+              'upgrade',
+              rsbuildDevServer.onHTTPUpgrade
+            )
+          })
+          sails.on('lifted', async () => {
+            await rsbuildDevServer.afterListen()
+          })
+          sails.on('lower', async () => {
+            await rsbuildDevServer.close()
+          })
         }
       } catch (error) {
         sails.error(error)
