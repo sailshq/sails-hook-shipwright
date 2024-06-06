@@ -100,7 +100,7 @@ module.exports = function defineShipwrightHook(sails) {
         },
         performance: {
           chunkSplit: {
-            strategy: 'all-in-one'
+            strategy: 'split-by-experience'
           }
         },
         server: {
