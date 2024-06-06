@@ -8,13 +8,49 @@
 const path = require('path')
 const { defineConfig, mergeRsbuildConfig } = require('@rsbuild/core')
 module.exports = function defineShipwrightHook(sails) {
+  function getManifestFiles() {
+    const manifestPath = path.resolve(
+      sails.config.appPath,
+      '.tmp',
+      'public',
+      'manifest.json'
+    )
+    const data = require(manifestPath)
+    const files = data.allFiles
+    return files
+  }
+  function generateScripts() {
+    const manifestFiles = getManifestFiles()
+    let scripts = []
+    manifestFiles.forEach((file) => {
+      if (file.endsWith('.js')) {
+        scripts.push(`<script type="text/javascript" src="${file}"></script>`)
+      }
+    })
+    return scripts.join('\n')
+  }
+
+  function generateStyles() {
+    const manifestFiles = getManifestFiles()
+    let styles = []
+    manifestFiles.forEach((file) => {
+      if (file.endsWith('.css')) {
+        styles.push(`<link rel="stylesheet" href="${file}">`)
+      }
+    })
+    return styles.join('\n')
+  }
   return {
+    defaults: {
+      shipwright: {
+        build: {}
+      }
+    },
     /**
      * Runs when this Sails app loads/lifts.
      */
     initialize: async function () {
       const appPath = sails.config.appPath
-
       const defaultConfigs = defineConfig({
         source: {
           entry: {
@@ -26,7 +62,7 @@ module.exports = function defineShipwrightHook(sails) {
           }
         },
         output: {
-          filenameHash: false,
+          manifest: true,
           distPath: {
             root: '.tmp/public',
             css: 'css',
@@ -71,6 +107,9 @@ module.exports = function defineShipwrightHook(sails) {
           port: sails.config.port,
           strictPort: true,
           printUrls: false
+        },
+        dev: {
+          writeToDisk: (file) => file.includes('manifest.json') // Write manifest file
         }
       })
       const config = mergeRsbuildConfig(
@@ -80,8 +119,8 @@ module.exports = function defineShipwrightHook(sails) {
       const { createRsbuild } = require('@rsbuild/core')
       try {
         const rsbuild = await createRsbuild({ rsbuildConfig: config })
-        if (process.env.NODE_ENV == 'production') {
-          rsbuild.build()
+        if (process.env.NODE_ENV === 'production') {
+          await rsbuild.build()
         } else {
           const rsbuildDevServer = await rsbuild.createDevServer()
           sails.after('hook:http:loaded', async () => {
@@ -97,9 +136,13 @@ module.exports = function defineShipwrightHook(sails) {
           sails.on('lower', async () => {
             await rsbuildDevServer.close()
           })
+          sails.after('lifted', () => {})
+        }
+        sails.config.views.locals = {
+          shipwright: { scripts: generateScripts, styles: generateStyles }
         }
       } catch (error) {
-        sails.error(error)
+        sails.log.error(error)
       }
     }
   }
