@@ -1,6 +1,6 @@
 {
   "name": "sails-hook-shipwright",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The modern asset pipeline for Sails",
   "main": "index.js",
   "scripts": {
