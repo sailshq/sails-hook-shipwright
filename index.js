@@ -19,28 +19,28 @@ module.exports = function defineShipwrightHook(sails) {
     const files = data.allFiles
     return files
   }
-  function generateScripts() {
-    const manifestFiles = getManifestFiles()
-    let scripts = []
-    manifestFiles.forEach((file) => {
-      if (file.endsWith('.js')) {
-        scripts.push(`<script type="text/javascript" src="${file}"></script>`)
-      }
-    })
-    return scripts.join('\n')
-  }
 
-  function generateStyles() {
-    const manifestFiles = getManifestFiles()
-    let styles = []
-    manifestFiles.forEach((file) => {
-      if (file.endsWith('.css')) {
-        styles.push(`<link rel="stylesheet" href="${file}">`)
-      }
-    })
-    return styles.join('\n')
-  }
   return {
+    generateScripts: function generateScripts() {
+      const manifestFiles = getManifestFiles()
+      let scripts = []
+      manifestFiles.forEach((file) => {
+        if (file.endsWith('.js')) {
+          scripts.push(`<script type="text/javascript" src="${file}"></script>`)
+        }
+      })
+      return scripts.join('\n')
+    },
+    generateStyles: function generateStyles() {
+      const manifestFiles = getManifestFiles()
+      let styles = []
+      manifestFiles.forEach((file) => {
+        if (file.endsWith('.css')) {
+          styles.push(`<link rel="stylesheet" href="${file}">`)
+        }
+      })
+      return styles.join('\n')
+    },
     defaults: {
       shipwright: {
         build: {}
@@ -50,6 +50,7 @@ module.exports = function defineShipwrightHook(sails) {
      * Runs when this Sails app loads/lifts.
      */
     initialize: async function () {
+      const hook = this
       const appPath = sails.config.appPath
       const defaultConfigs = defineConfig({
         source: {
@@ -139,7 +140,10 @@ module.exports = function defineShipwrightHook(sails) {
           sails.after('lifted', () => {})
         }
         sails.config.views.locals = {
-          shipwright: { scripts: generateScripts, styles: generateStyles }
+          shipwright: {
+            scripts: hook.generateScripts,
+            styles: hook.generateStyles
+          }
         }
       } catch (error) {
         sails.log.error(error)
