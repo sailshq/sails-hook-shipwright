@@ -126,10 +126,9 @@ module.exports = function defineShipwrightHook(sails) {
           const rsbuildDevServer = await rsbuild.createDevServer()
           sails.after('hook:http:loaded', async () => {
             sails.hooks.http.app.use(rsbuildDevServer.middlewares)
-            sails.hooks.http.server.on(
-              'upgrade',
-              rsbuildDevServer.onHTTPUpgrade
-            )
+            rsbuildDevServer.connectWebSocket({
+              server: sails.hooks.http.server
+            })
           })
           sails.on('lifted', async () => {
             await rsbuildDevServer.afterListen()
