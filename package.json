@@ -1,6 +1,6 @@
 {
   "name": "sails-hook-shipwright",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "The modern asset pipeline for Sails",
   "main": "index.js",
   "scripts": {
@@ -30,14 +30,14 @@
     "hookName": "shipwright"
   },
   "dependencies": {
-    "@rsbuild/core": "^1.1.8"
+    "@rsbuild/core": "^1.2.4"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.6.0",
-    "@commitlint/config-conventional": "^19.6.0",
+    "@commitlint/cli": "^19.7.1",
+    "@commitlint/config-conventional": "^19.7.1",
     "husky": "^9.1.7",
-    "lint-staged": "^15.2.10",
-    "prettier": "^3.4.1"
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.4.2"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"
