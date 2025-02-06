@@ -50,6 +50,11 @@ module.exports = function defineShipwrightHook(sails) {
      * Runs when this Sails app loads/lifts.
      */
     initialize: async function () {
+      // Skip asset building if --dontLift is set
+      if (sails.config.dontLift) {
+        sails.log.info('shipwright: Skipping asset build due to dontLift flag')
+        return
+      }
       const hook = this
       const appPath = sails.config.appPath
       const defaultConfigs = defineConfig({
@@ -136,7 +141,6 @@ module.exports = function defineShipwrightHook(sails) {
           sails.on('lower', async () => {
             await rsbuildDevServer.close()
           })
-          sails.after('lifted', () => {})
         }
         sails.config.views.locals = {
           shipwright: {
