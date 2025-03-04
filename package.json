@@ -30,7 +30,7 @@
     "hookName": "shipwright"
   },
   "dependencies": {
-    "@rsbuild/core": "^1.2.4"
+    "@rsbuild/core": "^1.2.15"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.7.1",
