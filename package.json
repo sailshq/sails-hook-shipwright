@@ -30,14 +30,14 @@
     "hookName": "shipwright"
   },
   "dependencies": {
-    "@rsbuild/core": "^1.4.0"
+    "@rsbuild/core": "^1.4.14"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.2",
-    "prettier": "^3.6.1"
+    "lint-staged": "^16.1.4",
+    "prettier": "^3.6.2"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"
