@@ -61,7 +61,9 @@ module.exports = function defineShipwrightHook(sails) {
         source: {
           entry: {
             app: path.resolve(appPath, 'assets', 'js', 'app.js')
-          },
+          }
+        },
+        resolve: {
           alias: {
             '@': path.resolve(appPath, 'assets', 'js'),
             '~': path.resolve(appPath, 'assets')
