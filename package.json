@@ -4,6 +4,7 @@
   "description": "The modern asset pipeline for Sails",
   "main": "index.js",
   "scripts": {
+    "test": "node --test tests/unit/*.test.js",
     "prepare": "husky install"
   },
   "repository": {
