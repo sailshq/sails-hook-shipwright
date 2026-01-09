@@ -31,7 +31,8 @@
     "hookName": "shipwright"
   },
   "dependencies": {
-    "@rsbuild/core": "^1.5.6"
+    "@rsbuild/core": "^1.7.0",
+    "fast-glob": "^3.3.3"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

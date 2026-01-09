@@ -10,6 +10,7 @@ const path = require('path')
 const {
   detectStylesEntry,
   detectJsEntry,
+  expandEntryPatterns,
   validatePlugins
 } = require('./lib/entry')
 const { createTagGenerators } = require('./lib/tags')
@@ -57,18 +58,22 @@ module.exports = function defineShipwrightHook(sails) {
       const { appPath } = sails.config
       const config = sails.config.shipwright
 
-      // Log detected entries
-      if (config.styles.entry) log.verbose('Styles → %s', config.styles.entry)
-      if (config.js.entry) log.verbose('JS → %s', config.js.entry)
-
-      // Maritime easter egg in silly mode
-      log.silly('Preparing to set sail...')
-
-      // Build entry object
+      // Build entry object - array patterns get expanded to file list
       const entry = {}
-      if (config.js.entry) entry.app = path.resolve(appPath, config.js.entry)
-      if (config.styles.entry)
+      const jsFiles = expandEntryPatterns(config.js.entry, appPath)
+      if (jsFiles?.length) {
+        entry.app = jsFiles
+        log.verbose('Bundling %d JS files', jsFiles.length)
+      } else if (config.js.entry && !Array.isArray(config.js.entry)) {
+        entry.app = path.resolve(appPath, config.js.entry)
+        log.verbose('Bundling %s', config.js.entry)
+      }
+      if (config.styles.entry) {
         entry.styles = path.resolve(appPath, config.styles.entry)
+        log.verbose('Compiling %s', config.styles.entry)
+      }
+
+      log.silly('Preparing to set sail...')
 
       if (!Object.keys(entry).length) {
         log.verbose('No entry points found, skipping')
@@ -150,7 +155,10 @@ module.exports = function defineShipwrightHook(sails) {
         // Register view locals (merge, don't overwrite)
         sails.config.views.locals = {
           ...sails.config.views.locals,
-          shipwright: createTagGenerators(appPath)
+          shipwright: createTagGenerators(appPath, {
+            jsInject: config.js.inject,
+            cssInject: config.styles.inject
+          })
         }
       } catch (error) {
         log.error('Build failed')
