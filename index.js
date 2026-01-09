@@ -1,68 +1,93 @@
 /**
- * shipwright hook
+ * sails-hook-shipwright
  *
- * @description :: A hook definition.  Extends Sails by adding shadow routes, implicit actions, and/or initialization logic.
- * @docs        :: https://sailsjs.com/docs/concepts/extending-sails/hooks
+ * Modern asset pipeline for Sails.js, powered by Rsbuild.
+ *
+ * @see https://github.com/sailshq/sails-hook-shipwright
  */
 
 const path = require('path')
-const { defineConfig, mergeRsbuildConfig } = require('@rsbuild/core')
+const {
+  detectStylesEntry,
+  detectJsEntry,
+  expandEntryPatterns,
+  validatePlugins
+} = require('./lib/entry')
+const { createTagGenerators } = require('./lib/tags')
+const { createLogger, randomQuote } = require('./lib/log')
+
 module.exports = function defineShipwrightHook(sails) {
-  function getManifestFiles() {
-    const manifestPath = path.resolve(
-      sails.config.appPath,
-      '.tmp',
-      'public',
-      'manifest.json'
-    )
-    const data = require(manifestPath)
-    const files = data.allFiles
-    return files
-  }
+  let log
 
   return {
-    generateScripts: function generateScripts() {
-      const manifestFiles = getManifestFiles()
-      let scripts = []
-      manifestFiles.forEach((file) => {
-        if (file.endsWith('.js')) {
-          scripts.push(`<script type="text/javascript" src="${file}"></script>`)
-        }
-      })
-      return scripts.join('\n')
-    },
-    generateStyles: function generateStyles() {
-      const manifestFiles = getManifestFiles()
-      let styles = []
-      manifestFiles.forEach((file) => {
-        if (file.endsWith('.css')) {
-          styles.push(`<link rel="stylesheet" href="${file}">`)
-        }
-      })
-      return styles.join('\n')
-    },
     defaults: {
       shipwright: {
+        styles: {},
+        js: {},
         build: {}
       }
     },
+
     /**
-     * Runs when this Sails app loads/lifts.
+     * Configure hook.
+     * Runs after defaults merge, before initialize.
+     * Detects entry points and validates plugins early.
+     */
+    configure: function () {
+      log = createLogger(sails.log)
+
+      const { appPath } = sails.config
+      const config = sails.config.shipwright
+
+      config.styles.entry = detectStylesEntry(appPath, config.styles.entry)
+      config.js.entry = detectJsEntry(appPath, config.js.entry)
+
+      validatePlugins({ appPath, stylesEntry: config.styles.entry, log })
+    },
+
+    /**
+     * Initialize hook.
+     * Starts Rsbuild build (production) or dev server (development).
      */
     initialize: async function () {
-      // Skip asset building if --dontLift is set
       if (sails.config.dontLift) {
-        sails.log.info('shipwright: Skipping asset build due to dontLift flag')
+        log.verbose('Skipping build (dontLift)')
         return
       }
-      const hook = this
-      const appPath = sails.config.appPath
-      const defaultConfigs = defineConfig({
-        source: {
-          entry: {
-            app: path.resolve(appPath, 'assets', 'js', 'app.js')
-          }
-        },
+
+      const { appPath } = sails.config
+      const config = sails.config.shipwright
+
+      // Build entry object - array patterns get expanded to file list
+      const entry = {}
+      const jsFiles = expandEntryPatterns(config.js.entry, appPath)
+      if (jsFiles?.length) {
+        entry.app = jsFiles
+        log.verbose('Bundling %d JS files', jsFiles.length)
+      } else if (config.js.entry && !Array.isArray(config.js.entry)) {
+        entry.app = path.resolve(appPath, config.js.entry)
+        log.verbose('Bundling %s', config.js.entry)
+      }
+      if (config.styles.entry) {
+        entry.styles = path.resolve(appPath, config.styles.entry)
+        log.verbose('Compiling %s', config.styles.entry)
+      }
+
+      log.silly('Preparing to set sail...')
+
+      if (!Object.keys(entry).length) {
+        log.verbose('No entry points found, skipping')
+        return
+      }
+
+      const {
+        defineConfig,
+        mergeRsbuildConfig,
+        createRsbuild
+      } = require('@rsbuild/core')
+
+      const defaultConfig = defineConfig({
+        source: { entry },
         resolve: {
           alias: {
             '@': path.resolve(appPath, 'assets', 'js'),
@@ -76,70 +101,68 @@ module.exports = function defineShipwrightHook(sails) {
             css: 'css',
             js: 'js',
             font: 'fonts',
-            image: 'images',
-            html: '/'
+            image: 'images'
           },
           copy: [
             {
               from: path.resolve(appPath, 'assets'),
               to: path.resolve(appPath, '.tmp', 'public'),
               noErrorOnMissing: true,
-              globOptions: {
-                // Exclude files that Rsbuild processes
-                ignore: ['**/js/**', '**/css/**']
-              }
+              globOptions: { ignore: ['**/js/**', '**/styles/**', '**/css/**'] }
             }
           ]
         },
         tools: {
-          htmlPlugin: false
+          htmlPlugin: false,
+          // Don't process absolute URLs in CSS - they reference static assets served from .tmp/public
+          cssLoader: { url: { filter: (url) => !url.startsWith('/') } }
         },
-        performance: {
-          chunkSplit: {
-            strategy: 'split-by-experience'
-          }
-        },
-        server: {
-          port: sails.config.port,
-          strictPort: true,
-          printUrls: false
-        },
-        dev: {
-          writeToDisk: (file) => file.includes('manifest.json') // Write manifest file
-        }
+        performance: { chunkSplit: { strategy: 'split-by-experience' } },
+        server: { port: sails.config.port, strictPort: true, printUrls: false },
+        dev: { writeToDisk: (file) => file.includes('manifest.json') }
       })
-      const config = mergeRsbuildConfig(
-        defaultConfigs,
-        sails.config.shipwright.build
-      )
-      const { createRsbuild } = require('@rsbuild/core')
+
+      const rsbuildConfig = mergeRsbuildConfig(defaultConfig, config.build)
+
       try {
-        const rsbuild = await createRsbuild({ rsbuildConfig: config })
+        const rsbuild = await createRsbuild({ rsbuildConfig })
+
         if (process.env.NODE_ENV === 'production') {
+          log.silly('Building for production...')
           await rsbuild.build()
+          log.verbose('Build complete ⚓')
+          log.silly('🚢 %s', randomQuote())
         } else {
-          const rsbuildDevServer = await rsbuild.createDevServer()
-          sails.after('hook:http:loaded', async () => {
-            sails.hooks.http.app.use(rsbuildDevServer.middlewares)
-            rsbuildDevServer.connectWebSocket({
-              server: sails.hooks.http.server
-            })
+          const devServer = await rsbuild.createDevServer()
+
+          sails.after('hook:http:loaded', () => {
+            sails.hooks.http.app.use(devServer.middlewares)
+            devServer.connectWebSocket({ server: sails.hooks.http.server })
           })
-          sails.on('lifted', async () => {
-            await rsbuildDevServer.afterListen()
+
+          sails.on('lifted', () => {
+            devServer.afterListen()
+            log.verbose('Dev server ready ⚓')
+            log.silly('🚢 %s', randomQuote())
           })
-          sails.on('lower', async () => {
-            await rsbuildDevServer.close()
+
+          sails.on('lower', () => {
+            devServer.close()
+            log.silly('Dropping anchor... goodbye!')
           })
         }
+
+        // Register view locals (merge, don't overwrite)
         sails.config.views.locals = {
-          shipwright: {
-            scripts: hook.generateScripts,
-            styles: hook.generateStyles
-          }
+          ...sails.config.views.locals,
+          shipwright: createTagGenerators(appPath, {
+            jsInject: config.js.inject,
+            cssInject: config.styles.inject
+          })
         }
       } catch (error) {
-        sails.log.error(error)
+        log.error('Build failed')
+        log.error(error)
       }
     }
   }
