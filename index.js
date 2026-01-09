@@ -81,25 +81,13 @@ module.exports = function defineShipwrightHook(sails) {
           },
           copy: [
             {
-              from: path.resolve(appPath, 'assets', 'images'),
-              to: path.resolve(appPath, '.tmp', 'public', 'images'),
-              noErrorOnMissing: true
-            },
-            {
-              from: path.resolve(appPath, 'assets', 'fonts'),
-              to: path.resolve(appPath, '.tmp', 'public', 'fonts'),
-              noErrorOnMissing: true
-            },
-            {
-              from: path.resolve(appPath, 'assets', 'dependencies'),
-              to: path.resolve(appPath, '.tmp', 'public', 'dependencies'),
-              noErrorOnMissing: true
-            },
-            {
-              context: path.resolve(appPath, 'assets'),
-              from: '**/*.html',
+              from: path.resolve(appPath, 'assets'),
               to: path.resolve(appPath, '.tmp', 'public'),
-              noErrorOnMissing: true
+              noErrorOnMissing: true,
+              globOptions: {
+                // Exclude files that Rsbuild processes
+                ignore: ['**/js/**', '**/css/**']
+              }
             }
           ]
         },
