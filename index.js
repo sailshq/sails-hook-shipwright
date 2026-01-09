@@ -18,6 +18,7 @@ const { createLogger, randomQuote } = require('./lib/log')
 
 module.exports = function defineShipwrightHook(sails) {
   let log
+  let tagGenerators
 
   return {
     defaults: {
@@ -44,15 +45,23 @@ module.exports = function defineShipwrightHook(sails) {
 
       validatePlugins({ appPath, stylesEntry: config.styles.entry, log })
 
-      // Register view locals early so other hooks/plugins can use them
+      // Create tag generators early so other hooks can use them
+      tagGenerators = createTagGenerators(appPath, {
+        jsInject: config.js.inject,
+        cssInject: config.styles.inject
+      })
+
+      // Register view locals
+      sails.config.views = sails.config.views || {}
       sails.config.views.locals = {
         ...sails.config.views.locals,
-        shipwright: createTagGenerators(appPath, {
-          jsInject: config.js.inject,
-          cssInject: config.styles.inject
-        })
+        shipwright: tagGenerators
       }
     },
+
+    // Expose tag generators on hook for other hooks to use
+    scripts: () => tagGenerators?.scripts() || '',
+    styles: () => tagGenerators?.styles() || '',
 
     /**
      * Initialize hook.
