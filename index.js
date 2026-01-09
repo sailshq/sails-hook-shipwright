@@ -43,6 +43,15 @@ module.exports = function defineShipwrightHook(sails) {
       config.js.entry = detectJsEntry(appPath, config.js.entry)
 
       validatePlugins({ appPath, stylesEntry: config.styles.entry, log })
+
+      // Register view locals early so other hooks/plugins can use them
+      sails.config.views.locals = {
+        ...sails.config.views.locals,
+        shipwright: createTagGenerators(appPath, {
+          jsInject: config.js.inject,
+          cssInject: config.styles.inject
+        })
+      }
     },
 
     /**
@@ -149,15 +158,6 @@ module.exports = function defineShipwrightHook(sails) {
           sails.on('lower', () => {
             devServer.close()
             log.silly('Dropping anchor... goodbye!')
-          })
-        }
-
-        // Register view locals (merge, don't overwrite)
-        sails.config.views.locals = {
-          ...sails.config.views.locals,
-          shipwright: createTagGenerators(appPath, {
-            jsInject: config.js.inject,
-            cssInject: config.styles.inject
           })
         }
       } catch (error) {
