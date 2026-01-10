@@ -135,7 +135,10 @@ module.exports = function defineShipwrightHook(sails) {
           // Don't process absolute URLs in CSS - they reference static assets served from .tmp/public
           cssLoader: { url: { filter: (url) => !url.startsWith('/') } }
         },
-        performance: { chunkSplit: { strategy: 'split-by-experience' } },
+        performance: {
+          chunkSplit: { strategy: 'split-by-experience' },
+          printFileSize: { diff: true }
+        },
         server: { port: sails.config.port, strictPort: true, printUrls: false },
         dev: { writeToDisk: (file) => file.includes('manifest.json') }
       })
