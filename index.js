@@ -133,7 +133,15 @@ module.exports = function defineShipwrightHook(sails) {
         tools: {
           htmlPlugin: false,
           // Don't process absolute URLs in CSS - they reference static assets served from .tmp/public
-          cssLoader: { url: { filter: (url) => !url.startsWith('/') } }
+          cssLoader: { url: { filter: (url) => !url.startsWith('/') } },
+          rspack: {
+            watchOptions: {
+              // Only watch assets/ and node_modules/ — ignore top-level data
+              // directories (e.g. db/ from sails-disk) so non-source filesystem
+              // writes don't trigger rebuilds.
+              ignored: /^(?!.*[\\/](assets|node_modules)[\\/])/
+            }
+          }
         },
         performance: {
           chunkSplit: { strategy: 'split-by-experience' },
