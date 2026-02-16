@@ -83,11 +83,20 @@ module.exports = function defineShipwrightHook(sails) {
         entry.app = jsFiles
         log.verbose('Bundling %d JS files', jsFiles.length)
       } else if (config.js.entry && !Array.isArray(config.js.entry)) {
-        entry.app = path.resolve(appPath, config.js.entry)
+        entry.app = [path.resolve(appPath, config.js.entry)]
         log.verbose('Bundling %s', config.js.entry)
       }
       if (config.styles.entry) {
-        entry.styles = path.resolve(appPath, config.styles.entry)
+        const stylesPath = path.resolve(appPath, config.styles.entry)
+        if (entry.app) {
+          // Bundle CSS with the JS entry so the chunk keeps a JS module map.
+          // CSS-only entries produce chunks with no JS modules, which crashes
+          // the HMR runtime in jsonp_chunk_loading when it tries to apply
+          // updates. The CSS extract plugin still outputs a separate CSS file.
+          entry.app.unshift(stylesPath)
+        } else {
+          entry.styles = stylesPath
+        }
         log.verbose('Compiling %s', config.styles.entry)
       }
 
