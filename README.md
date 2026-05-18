@@ -298,10 +298,24 @@ options changed:
   `on` option.
 - `core-js` is no longer installed by Rsbuild by default. Install `core-js`
   directly if you enable `output.polyfill`.
+- Module Federation runtime packages are no longer installed implicitly. Install
+  the federation runtime tooling your app uses before enabling Module
+  Federation config.
+- Bundle analysis is no longer provided by `performance.bundleAnalyze`. Use
+  Rsdoctor or add an explicit analyzer plugin in `build.plugins`.
 - Webpack provider support was removed by Rsbuild. Shipwright's defaults use
   Rspack only.
 - Rsbuild's default web targets are more modern. Add a browserslist config if
   your app needs the older Rsbuild 1 browser baseline.
+- Node builds target Node.js 20 by default and emit ESM by default in Rsbuild 2.
+  Set explicit Rsbuild output options if your app has a custom Node bundle.
+- Decorator transforms now default to the `2023-11` decorators proposal. Apps
+  using legacy decorators should configure the transform explicitly.
+- Audit advanced Rsbuild overrides when upgrading. Removed or deprecated options
+  include `source.alias`, `source.aliasStrategy`, `performance.bundleAnalyze`,
+  `performance.removeMomentLocale`, `performance.profile`, webpack provider
+  tooling, `dev.setupMiddlewares`, `?__inline=false`, and customized built-in
+  JS/CSS rules.
 
 Rsbuild 2 is published as ESM. Shipwright loads it through dynamic `import()`
 from the Sails hook, and Node.js `20.19+` can still load Rsbuild plugin packages
