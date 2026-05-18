@@ -3,9 +3,13 @@
   "version": "1.2.0",
   "description": "The modern asset pipeline for Sails",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "lib"
+  ],
   "scripts": {
     "test": "node --test tests/unit/*.test.js",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
