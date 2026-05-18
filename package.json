@@ -3,9 +3,13 @@
   "version": "1.2.0",
   "description": "The modern asset pipeline for Sails",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "lib"
+  ],
   "scripts": {
     "test": "node --test tests/unit/*.test.js",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -30,8 +34,11 @@
     "isHook": true,
     "hookName": "shipwright"
   },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "dependencies": {
-    "@rsbuild/core": "^1.7.3",
+    "@rsbuild/core": "^2.0.6",
     "fast-glob": "^3.3.3"
   },
   "devDependencies": {
