@@ -24,6 +24,12 @@ _Benchmarks from [fleetdm.com](https://fleetdm.com) migration ([fleetdm/fleet#38
 npm install sails-hook-shipwright --save
 ```
 
+## Runtime Requirements
+
+Shipwright uses Rsbuild 2.x and requires Node.js `20.19+` or `22.12+`.
+This matches Rsbuild's supported runtime floor now that Node.js 18 is no
+longer supported by Rsbuild.
+
 Disable the grunt hook in `.sailsrc`:
 
 ```json
@@ -270,14 +276,36 @@ module.exports.shipwright = {
     output: {
       // Custom output options
     },
-    performance: {
-      // Custom performance options
+    splitChunks: {
+      // Custom chunk splitting options
     }
   }
 }
 ```
 
 See [Rsbuild Configuration](https://rsbuild.dev/config/) for all available options.
+
+## Rsbuild 2 Notes
+
+Shipwright is built on Rsbuild 2.x, which includes Rspack 2.x. Most apps can
+continue using the same `config/shipwright.js`, but a few advanced Rsbuild
+options changed:
+
+- `performance.chunkSplit` is deprecated. Migrate custom chunk-splitting config
+  to `splitChunks`.
+- `server.proxy` uses `http-proxy-middleware` v4. If you configure proxies,
+  replace `context` with `pathFilter` and move proxy event callbacks under the
+  `on` option.
+- `core-js` is no longer installed by Rsbuild by default. Install `core-js`
+  directly if you enable `output.polyfill`.
+- Webpack provider support was removed by Rsbuild. Shipwright's defaults use
+  Rspack only.
+- Rsbuild's default web targets are more modern. Add a browserslist config if
+  your app needs the older Rsbuild 1 browser baseline.
+
+Rsbuild 2 is published as ESM. Shipwright loads it through dynamic `import()`
+from the Sails hook, and Node.js `20.19+` can still load Rsbuild plugin packages
+from CommonJS Sails config files.
 
 ## Migrating from Grunt
 

@@ -15,6 +15,7 @@ const {
 } = require('./lib/entry')
 const { createTagGenerators } = require('./lib/tags')
 const { createLogger, randomQuote } = require('./lib/log')
+const { createDefaultRsbuildConfig } = require('./lib/rsbuild-config')
 
 module.exports = function defineShipwrightHook(sails) {
   let log
@@ -107,58 +108,16 @@ module.exports = function defineShipwrightHook(sails) {
         return
       }
 
-      const {
-        defineConfig,
-        mergeRsbuildConfig,
-        createRsbuild
-      } = require('@rsbuild/core')
+      const { defineConfig, mergeRsbuildConfig, createRsbuild } =
+        await import('@rsbuild/core')
 
-      const defaultConfig = defineConfig({
-        source: { entry },
-        resolve: {
-          alias: {
-            '@': path.resolve(appPath, 'assets', 'js'),
-            '~': path.resolve(appPath, 'assets')
-          }
-        },
-        output: {
-          manifest: true,
-          distPath: {
-            root: '.tmp/public',
-            css: 'css',
-            js: 'js',
-            font: 'fonts',
-            image: 'images'
-          },
-          copy: [
-            {
-              from: path.resolve(appPath, 'assets'),
-              to: path.resolve(appPath, '.tmp', 'public'),
-              noErrorOnMissing: true,
-              globOptions: { ignore: ['**/js/**', '**/styles/**', '**/css/**'] }
-            }
-          ]
-        },
-        tools: {
-          htmlPlugin: false,
-          // Don't process absolute URLs in CSS - they reference static assets served from .tmp/public
-          cssLoader: { url: { filter: (url) => !url.startsWith('/') } },
-          rspack: {
-            watchOptions: {
-              // Only watch assets/ and node_modules/ — ignore top-level data
-              // directories (e.g. db/ from sails-disk) so non-source filesystem
-              // writes don't trigger rebuilds.
-              ignored: /^(?!.*[\\/](assets|node_modules)[\\/])/
-            }
-          }
-        },
-        performance: {
-          chunkSplit: { strategy: 'split-by-experience' },
-          printFileSize: { diff: true }
-        },
-        server: { port: sails.config.port, strictPort: true, printUrls: false },
-        dev: { writeToDisk: (file) => file.includes('manifest.json') }
-      })
+      const defaultConfig = defineConfig(
+        createDefaultRsbuildConfig({
+          appPath,
+          entry,
+          port: sails.config.port
+        })
+      )
 
       const rsbuildConfig = mergeRsbuildConfig(defaultConfig, config.build)
 
