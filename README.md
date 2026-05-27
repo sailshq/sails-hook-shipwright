@@ -391,19 +391,33 @@ module.exports.shipwright = {
 
 ### View Helpers
 
-#### `shipwright.scripts()`
+#### `shipwright.scripts([entryName])`
 
 Returns `<script>` tags for:
 
 1. Injected files (from `js.inject` patterns)
-2. Bundled files (from manifest)
+2. Bundled initial files (from manifest)
 
-#### `shipwright.styles()`
+By default, Shipwright emits the `app` entry. Pass an entry name to emit a
+different initial entry from the Rsbuild manifest:
+
+```ejs
+<%- shipwright.scripts('admin') %>
+```
+
+#### `shipwright.styles([entryName])`
 
 Returns `<link>` tags for:
 
 1. Injected files (from `styles.inject` patterns)
-2. Compiled styles (from manifest)
+2. Compiled initial styles (from manifest)
+
+By default, Shipwright emits the `app` entry. Pass an entry name to emit a
+different initial entry from the Rsbuild manifest:
+
+```ejs
+<%- shipwright.styles('admin') %>
+```
 
 ## Troubleshooting
 

@@ -61,8 +61,8 @@ module.exports = function defineShipwrightHook(sails) {
     },
 
     // Expose tag generators on hook for other hooks to use
-    scripts: () => tagGenerators?.scripts() || '',
-    styles: () => tagGenerators?.styles() || '',
+    scripts: (entryName) => tagGenerators?.scripts(entryName) || '',
+    styles: (entryName) => tagGenerators?.styles(entryName) || '',
 
     /**
      * Initialize hook.
