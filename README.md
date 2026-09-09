@@ -28,7 +28,8 @@ npm install sails-hook-shipwright --save
 
 Shipwright uses Rsbuild 2.x and requires Node.js `20.19+` or `22.12+`.
 This matches Rsbuild's supported runtime floor now that Node.js 18 is no
-longer supported by Rsbuild.
+longer supported by Rsbuild. This release track is tested with Rsbuild 2.2.5
+and Rspack 2.2.3.
 
 Disable the grunt hook in `.sailsrc`:
 
@@ -218,6 +219,36 @@ module.exports.shipwright = {
 
 Shipwright auto-detects your styles entry point (`importer.less`, `main.scss`, etc.).
 
+## Tailwind CSS v4
+
+For new Tailwind CSS v4 apps, prefer Rsbuild's Tailwind plugin over routing
+Tailwind through PostCSS:
+
+```bash
+npm install @rsbuild/plugin-tailwindcss tailwindcss --save-dev
+```
+
+```js
+const { pluginTailwindcss } = require('@rsbuild/plugin-tailwindcss')
+
+module.exports.shipwright = {
+  build: {
+    plugins: [pluginTailwindcss()]
+  }
+}
+```
+
+Keep the Tailwind import in a CSS entry file:
+
+```css
+@import 'tailwindcss';
+```
+
+If Tailwind is the only PostCSS plugin in the app, you can remove
+`@tailwindcss/postcss` and `postcss.config.js`. Keep PostCSS when the app uses
+additional PostCSS plugins, and keep Tailwind v3 apps on the existing PostCSS
+setup.
+
 ## Hot Module Replacement
 
 In development, Shipwright provides HMR via Rsbuild's dev server. Changes to your JS and CSS files are instantly reflected in the browser without a full page reload.
@@ -285,6 +316,183 @@ module.exports.shipwright = {
 
 See [Rsbuild Configuration](https://rsbuild.dev/config/) for all available options.
 
+### React Compiler
+
+React apps can opt into React Compiler through `@rsbuild/plugin-react`:
+
+```js
+const { pluginReact } = require('@rsbuild/plugin-react')
+
+module.exports.shipwright = {
+  build: {
+    plugins: [
+      pluginReact({
+        reactCompiler: true
+      })
+    ]
+  }
+}
+```
+
+For React 17 or React 18 apps, install `react-compiler-runtime` and set the
+target React version:
+
+```js
+pluginReact({
+  reactCompiler: {
+    target: '18'
+  }
+})
+```
+
+React Compiler can surface application-level compatibility issues, so enable it
+per app after a normal build passes.
+
+### SSR and Node Externals
+
+Keep browser assets bundled by default. Do not enable `output.autoExternal` for
+normal Sails browser builds.
+
+For SSR or other Node-targeted output, `output.autoExternal` can keep runtime
+dependencies external instead of bundling them:
+
+```js
+module.exports.shipwright = {
+  build: {
+    environments: {
+      ssr: {
+        output: {
+          target: 'node',
+          autoExternal: {
+            dependencies: true,
+            optionalDependencies: true,
+            peerDependencies: true,
+            devDependencies: false,
+            exclude: ['react', 'react-dom']
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Adjust the environment shape to match the app's actual SSR integration.
+Current Rsbuild 2.x Node builds may emit split chunks by default, so verify that
+the Sails/Inertia SSR loader can load the emitted output before enabling this
+in production.
+
+### Resource Imports
+
+Rsbuild 2.x supports a few resource import patterns that are useful in richer
+Sails frontends.
+
+Use CSS `?url` imports when runtime code decides when to load a stylesheet:
+
+```js
+import themeUrl from './themes/dark.css?url'
+
+const link = document.createElement('link')
+link.rel = 'stylesheet'
+link.href = themeUrl
+document.head.appendChild(link)
+```
+
+Use worker query imports for simple workers:
+
+```js
+import ReportWorker from './report-worker.js?worker'
+
+const worker = new ReportWorker()
+worker.postMessage({ action: 'build-report' })
+```
+
+Use the standard Worker constructor when you need full `WorkerOptions`:
+
+```js
+const worker = new Worker(new URL('./worker.js', import.meta.url), {
+  type: 'module',
+  credentials: 'include'
+})
+```
+
+Use import attributes when you need a file's raw text:
+
+```js
+import template from './welcome-email.html' with { type: 'text' }
+```
+
+Advanced apps can also use Wasm source imports when they need to instantiate a
+`WebAssembly.Module` manually or share it with a worker.
+
+### Page Discovery
+
+Inertia apps can keep using synchronous `require()` page resolution for simple
+starter behavior. Larger apps can evaluate `import.meta.glob` for Vite-like page
+discovery and route-level code splitting:
+
+```js
+const pages = import.meta.glob('./pages/**/*.jsx')
+
+createInertiaApp({
+  resolve: (name) => pages[`./pages/${name}.jsx`]()
+})
+```
+
+Validate this across the app's framework template before making it a default.
+Rspack also supports `caseSensitive: false`, which can smooth over page-name
+mismatches, but teams should still normalize casing for Linux deployments.
+
+### Babel and SVGR Parallel Transforms
+
+Apps that already use `@rsbuild/plugin-babel` or `@rsbuild/plugin-svgr` can
+evaluate parallel transforms:
+
+```js
+pluginBabel({ parallel: true })
+pluginSvgr({ parallel: true })
+```
+
+Only enable this when plugin options are structured-cloneable. If options
+contain functions, keep the default serial mode.
+
+### Dynamic Ports
+
+Rsbuild supports `server.port: 0` for dynamic port assignment. Shipwright
+mounts Rsbuild middleware and HMR through the Sails HTTP server, so normal apps
+should keep the default Sails-owned port behavior. Use Sails' `PORT` or
+`config/local.js` for local port changes.
+
+Only use Rsbuild dynamic ports in custom fixtures or tests after verifying that
+the browser HMR client still connects through Sails.
+
+### Selective Minification
+
+Rsbuild 2.x supports arrays for JavaScript minifier options, which lets advanced
+apps apply different minification rules to different files:
+
+```js
+module.exports.shipwright = {
+  build: {
+    output: {
+      minify: {
+        jsOptions: [
+          {
+            include: /app\./,
+            minimizerOptions: {
+              compress: { drop_console: true }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+Keep this as an app-level optimization. Shipwright does not apply selective
+minification by default.
+
 ## Rsbuild 2 Notes
 
 Shipwright is built on Rsbuild 2.x, which includes Rspack 2.x. Most apps can
@@ -316,10 +524,47 @@ options changed:
   `performance.removeMomentLocale`, `performance.profile`, webpack provider
   tooling, `dev.setupMiddlewares`, `?__inline=false`, and customized built-in
   JS/CSS rules.
+- Rspack 2.2 changed the SWC Wasm plugin boundary. If an app uses SWC Wasm
+  plugins, upgrade or rebuild those plugins for the matching SWC version.
 
 Rsbuild 2 is published as ESM. Shipwright loads it through dynamic `import()`
 from the Sails hook, and Node.js `20.19+` can still load Rsbuild plugin packages
 from CommonJS Sails config files.
+
+## Migrating to Current Rsbuild 2.x
+
+Normal Sails apps usually only need the dependency upgrade and verification:
+
+1. Upgrade `sails-hook-shipwright`.
+2. Refresh the app lockfile with the package manager.
+3. Keep `.sailsrc` with the Grunt hook disabled.
+4. Keep existing `shipwright.styles()` and `shipwright.scripts()` calls.
+5. Keep existing `config/shipwright.js` unless the app has advanced Rsbuild
+   overrides.
+6. Do not enable `output.autoExternal` for browser assets.
+7. Verify `.tmp/public/manifest.json` after a production build.
+
+TBJS apps should also evaluate the template-level improvements:
+
+1. Use `@rsbuild/plugin-tailwindcss` for Tailwind v4.
+2. Keep Tailwind v3 on PostCSS.
+3. Opt into React Compiler only after validating the app.
+4. Use `output.autoExternal` only for SSR or Node output.
+5. Verify SSR loaders against current Rsbuild 2.x Node split-chunk output.
+6. Use resource import recipes only where the app needs them.
+7. Use dynamic Rsbuild ports only in custom tests after HMR is verified through
+   Sails.
+
+Suggested verification:
+
+```bash
+npm install
+npm test
+NODE_ENV=production node app.js
+```
+
+For local development, also run the app's dev command and confirm Sails lifts,
+frontend HMR connects, and the generated asset tags point at valid files.
 
 ## Migrating from Grunt
 
