@@ -49,6 +49,18 @@ describe('rsbuild-config.js', () => {
     assert.strictEqual(config.output.distPath.css, 'css')
   })
 
+  it('does not externalize dependencies for the default browser build', () => {
+    const config = createDefaultRsbuildConfig({
+      appPath: '/app',
+      entry: { app: ['/app/assets/js/app.js'] },
+      port: TEST_SAILS_PORT
+    })
+
+    assert.strictEqual(config.output.autoExternal, undefined)
+    assert.strictEqual(config.output.target, undefined)
+    assert.strictEqual(config.environments, undefined)
+  })
+
   it('uses the Sails-supplied port for the Rsbuild dev server config', () => {
     const config = createDefaultRsbuildConfig({
       appPath: '/app',
@@ -126,5 +138,66 @@ describe('rsbuild-config.js', () => {
       manifest.allFiles.some((file) => file.startsWith('/css/')),
       'manifest should include a CSS file for styles()'
     )
+  })
+
+  it('builds documented Rsbuild 2 resource import recipes', async () => {
+    const jsPath = path.join(tmpDir, 'assets/js/app.js')
+    const cssPath = path.join(tmpDir, 'assets/css/theme.css')
+    const workerPath = path.join(tmpDir, 'assets/js/report-worker.js')
+    const textPath = path.join(tmpDir, 'assets/js/welcome-email.html')
+
+    fs.mkdirSync(path.dirname(jsPath), { recursive: true })
+    fs.mkdirSync(path.dirname(cssPath), { recursive: true })
+    fs.writeFileSync(
+      jsPath,
+      [
+        "import themeUrl from '../css/theme.css?url'",
+        "import template from './welcome-email.html' with { type: 'text' }",
+        "import ReportWorker from './report-worker.js?worker'",
+        '',
+        'window.shipwrightResourceRecipes = {',
+        '  themeUrl,',
+        '  template,',
+        '  workerName: ReportWorker.name',
+        '}',
+        ''
+      ].join('\n')
+    )
+    fs.writeFileSync(cssPath, '.resource-recipe { color: #123456; }\n')
+    fs.writeFileSync(
+      workerPath,
+      "self.onmessage = () => self.postMessage('ready')\n"
+    )
+    fs.writeFileSync(textPath, '<p>Welcome aboard</p>\n')
+
+    const { createRsbuild } = await import('@rsbuild/core')
+    const rsbuild = await createRsbuild({
+      cwd: tmpDir,
+      rsbuildConfig: createDefaultRsbuildConfig({
+        appPath: tmpDir,
+        entry: { app: jsPath },
+        port: TEST_SAILS_PORT
+      })
+    })
+
+    await rsbuild.build()
+
+    const publicPath = path.join(tmpDir, '.tmp/public')
+    const manifestPath = path.join(publicPath, 'manifest.json')
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+    const emittedFiles = manifest.allFiles.map((file) =>
+      path.join(publicPath, file.slice(1))
+    )
+    const emittedJs = emittedFiles
+      .filter((file) => file.endsWith('.js'))
+      .map((file) => fs.readFileSync(file, 'utf8'))
+      .join('\n')
+
+    assert.ok(
+      manifest.allFiles.some((file) => file.startsWith('/css/')),
+      'CSS ?url should emit the referenced stylesheet as an asset'
+    )
+    assert.match(emittedJs, /Welcome aboard/)
+    assert.match(emittedJs, /new Worker/)
   })
 })

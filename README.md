@@ -238,16 +238,50 @@ module.exports.shipwright = {
 }
 ```
 
+In TBJS framework apps, register it beside the framework plugin:
+
+```js
+const { pluginReact } = require('@rsbuild/plugin-react')
+const { pluginTailwindcss } = require('@rsbuild/plugin-tailwindcss')
+
+module.exports.shipwright = {
+  build: {
+    plugins: [pluginReact(), pluginTailwindcss()]
+  }
+}
+```
+
 Keep the Tailwind import in a CSS entry file:
 
 ```css
 @import 'tailwindcss';
 ```
 
+Do not put the Tailwind v4 import directly in a Sass, Less, or Stylus file.
+If the rest of the app uses a preprocessor, keep Tailwind in a plain `.css`
+entry and import the preprocessor output from there, or use a separate CSS
+entry for Tailwind.
+
 If Tailwind is the only PostCSS plugin in the app, you can remove
 `@tailwindcss/postcss` and `postcss.config.js`. Keep PostCSS when the app uses
 additional PostCSS plugins, and keep Tailwind v3 apps on the existing PostCSS
 setup.
+
+Tailwind v4 scans source files automatically. If Sails views, generated
+content, monorepo packages, or ignored directories are not being scanned the way
+your app expects, configure that from the CSS entry:
+
+```css
+@import 'tailwindcss' source('../');
+
+@source '../../views';
+@source '../../api';
+@source '../node_modules/@acme/ui';
+@source not '../../assets/vendor';
+```
+
+Use `source(none)` plus explicit `@source` entries for large apps that need a
+tightly controlled scan surface.
 
 ## Hot Module Replacement
 
@@ -320,6 +354,8 @@ See [Rsbuild Configuration](https://rsbuild.dev/config/) for all available optio
 
 React apps can opt into React Compiler through `@rsbuild/plugin-react`:
 
+For React 19:
+
 ```js
 const { pluginReact } = require('@rsbuild/plugin-react')
 
@@ -337,6 +373,10 @@ module.exports.shipwright = {
 For React 17 or React 18 apps, install `react-compiler-runtime` and set the
 target React version:
 
+```bash
+npm install react-compiler-runtime --save
+```
+
 ```js
 pluginReact({
   reactCompiler: {
@@ -347,6 +387,11 @@ pluginReact({
 
 React Compiler can surface application-level compatibility issues, so enable it
 per app after a normal build passes.
+
+If the compiler reports diagnostics, treat them as app code cleanup work before
+forcing the optimization. Projects already using the Babel-based React Compiler
+transform should prefer this Rsbuild plugin path unless they depend on
+Babel-specific customization.
 
 ### SSR and Node Externals
 
@@ -381,6 +426,11 @@ Adjust the environment shape to match the app's actual SSR integration.
 Current Rsbuild 2.x Node builds may emit split chunks by default, so verify that
 the Sails/Inertia SSR loader can load the emitted output before enabling this
 in production.
+
+Common externalization candidates include observability SDKs, native addons,
+runtime-instrumented packages, and peer dependencies supplied by the host app.
+Framework packages that must match client and server rendering behavior may
+need to stay bundled; use `exclude` for those.
 
 ### Resource Imports
 
@@ -425,6 +475,11 @@ import template from './welcome-email.html' with { type: 'text' }
 Advanced apps can also use Wasm source imports when they need to instantiate a
 `WebAssembly.Module` manually or share it with a worker.
 
+These are optional app-level recipes. Shipwright's defaults already pass them
+through to Rsbuild 2.x; do not add template code for them unless the app
+actually needs runtime CSS loading, workers, raw source text, or Wasm module
+control.
+
 ### Page Discovery
 
 Inertia apps can keep using synchronous `require()` page resolution for simple
@@ -442,6 +497,11 @@ createInertiaApp({
 Validate this across the app's framework template before making it a default.
 Rspack also supports `caseSensitive: false`, which can smooth over page-name
 mismatches, but teams should still normalize casing for Linux deployments.
+
+Shipwright keeps `require()` as the conservative default because it is simple
+and works across current React, Vue, and Svelte TBJS starters. Adopt
+`import.meta.glob` per app when route-level chunks are worth the extra async
+page-loading behavior.
 
 ### Babel and SVGR Parallel Transforms
 
@@ -533,6 +593,10 @@ from CommonJS Sails config files.
 
 ## Migrating to Current Rsbuild 2.x
 
+This section supersedes the original Rsbuild 2.1 checklist. As of this pass,
+Shipwright is tested against Rsbuild 2.2.5 and Rspack 2.2.3, so the migration
+target is the current Rsbuild 2.x line rather than the initial 2.1 release.
+
 Normal Sails apps usually only need the dependency upgrade and verification:
 
 1. Upgrade `sails-hook-shipwright`.
@@ -543,6 +607,8 @@ Normal Sails apps usually only need the dependency upgrade and verification:
    overrides.
 6. Do not enable `output.autoExternal` for browser assets.
 7. Verify `.tmp/public/manifest.json` after a production build.
+8. If the app uses SWC Wasm plugins, check compatibility with the Rspack 2.2
+   SWC boundary before upgrading.
 
 TBJS apps should also evaluate the template-level improvements:
 
@@ -555,6 +621,21 @@ TBJS apps should also evaluate the template-level improvements:
 7. Use dynamic Rsbuild ports only in custom tests after HMR is verified through
    Sails.
 
+Feature notes:
+
+- Tailwind v4: `@rsbuild/plugin-tailwindcss` is preferred for new TBJS apps.
+  Existing `@tailwindcss/postcss` apps remain supported.
+- React Compiler: optional, app-by-app, and disabled by default in starter
+  templates until app compatibility is proven.
+- SSR externals: `output.autoExternal` is for Node or SSR builds only.
+- Resource imports and `import.meta.glob`: useful recipes, not new defaults.
+
+Related Shipwright issues: [#26](https://github.com/sailshq/sails-hook-shipwright/issues/26),
+[#27](https://github.com/sailshq/sails-hook-shipwright/issues/27),
+[#28](https://github.com/sailshq/sails-hook-shipwright/issues/28),
+[#29](https://github.com/sailshq/sails-hook-shipwright/issues/29), and
+[#30](https://github.com/sailshq/sails-hook-shipwright/issues/30).
+
 Suggested verification:
 
 ```bash
@@ -565,6 +646,12 @@ NODE_ENV=production node app.js
 
 For local development, also run the app's dev command and confirm Sails lifts,
 frontend HMR connects, and the generated asset tags point at valid files.
+
+Rollback is the normal package-manager rollback: revert the app's
+`package.json`, lockfile, and any `config/shipwright.js` changes from the
+upgrade branch, reinstall, and redeploy the previous known-good build. Keep app
+code changes, Tailwind major-version migrations, and React Compiler trials in
+separate commits so a build-tool rollback stays small.
 
 ## Migrating from Grunt
 
